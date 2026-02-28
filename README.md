@@ -1,4 +1,4 @@
-# Fintech-Comapny-Analysis
+# Fintech-Company-Analysis
 Problem Statement
 
 Businesses spend a lot of time manually processing data and generating responses. This project automates the process using n8n workflow automation and Generative AI.
