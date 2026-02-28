@@ -1,0 +1,197 @@
+{
+  "name": "My workflow 3",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "d7b55912-d68d-4152-a049-927349e03f56",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "fileSelector": "C:\\Users\\ayush\\.n8n-files\\new_loan_cleaned.csv",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "dfbd9c1d-1424-443f-abd1-f821a5110923",
+      "name": "Read/Write Files from Disk"
+    },
+    {
+      "parameters": {
+        "options": {
+          "delimiter": ","
+        }
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        416,
+        0
+      ],
+      "id": "f475a638-6e86-4e52-8c7d-b812e5e455db",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all rows\nconst loans = items.map(item => item.json);\n\n// 1️⃣ Total Active Loans\nconst totalActiveLoans = loans.length;\n\n\n// 2️⃣ Percentage of Bad Loans\nconst badLoans = loans.filter(loan => \n    loan.loan_condition !== \"GOOD LOAN\"\n);\n\nconst badLoanPercentage = totalActiveLoans > 0\n    ? ((badLoans.length / totalActiveLoans) * 100).toFixed(2)\n    : 0;\n\n\n// 3️⃣ Highest Interest Rate\nconst highestInterestRate = Math.max(\n    ...loans.map(loan => parseFloat(loan.interest_rate))\n).toFixed(2);\n\n\n// 4️⃣ Average Interest Rate by Grade\nlet gradeInterestMap = {};\n\nloans.forEach(loan => {\n    const grade = loan.grade;\n    const rate = parseFloat(loan.interest_rate);\n\n    if (!gradeInterestMap[grade]) {\n        gradeInterestMap[grade] = [];\n    }\n\n    gradeInterestMap[grade].push(rate);\n});\n\nlet avgInterestByGrade = {};\n\nfor (let grade in gradeInterestMap) {\n    const rates = gradeInterestMap[grade];\n    const avg = rates.reduce((a, b) => a + b, 0) / rates.length;\n    avgInterestByGrade[grade] = avg.toFixed(2);\n}\n\n\n// 5️⃣ Regional Default Rate\nlet regionStats = {};\n\nloans.forEach(loan => {\n    const region = loan.region;\n\n    if (!regionStats[region]) {\n        regionStats[region] = { total: 0, bad: 0 };\n    }\n\n    regionStats[region].total++;\n\n    if (loan.loan_condition !== \"GOOD LOAN\") {\n        regionStats[region].bad++;\n    }\n});\n\nlet regionalDefaultRate = {};\n\nfor (let region in regionStats) {\n    const { total, bad } = regionStats[region];\n    const percent = total > 0 ? (bad / total) * 100 : 0;\n    regionalDefaultRate[region] = percent.toFixed(2);\n}\n\n\n// Final Output\nreturn [\n  {\n    json: {\n      totalActiveLoans,\n      badLoanPercentage: badLoanPercentage + \"%\",\n      highestInterestRate: highestInterestRate + \"%\",\n      avgInterestByGrade,\n      regionalDefaultRate\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        0
+      ],
+      "id": "777d3d8b-f90c-4228-89f7-7df638353915",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=You are a senior loan risk analyst preparing a weekly portfolio report.\n\nUsing the following calculated portfolio metrics:\n\nTotal Active Loans: {{$json.totalActiveLoans}}\nBad Loan Percentage: {{$json.badLoanPercentage}}\nHighest Interest Rate: {{$json.highestInterestRate}}\nAverage Interest Rate by Grade: {{$json.avgInterestByGrade}}\nRegional Default Rate: {{$json.regionalDefaultRate}}\n\nGenerate a professional weekly loan risk summary report.\n\nThe report must:\n\n1. Summarize overall portfolio performance.\n2. Interpret the bad loan percentage and risk exposure.\n3. Comment on the highest interest rate and what it implies.\n4. Analyze grade-wise interest patterns.\n5. Analyze regional default patterns.\n6. Provide actionable recommendations.\n7. Use professional business language suitable for senior management."
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        832,
+        0
+      ],
+      "id": "adbb4a7d-aa4c-4983-9f2d-8babc9116f91",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "Rk7eKerfpE4tI6WX",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "ayushimishra200012@gmail.com",
+        "subject": "Weekly Loan Risk Summary Report",
+        "message": "={{$json[\"output\"][0][\"content\"][0][\"text\"]}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1184,
+        0
+      ],
+      "id": "ea4e0ecd-00ae-4919-a376-1bad3fa1e4da",
+      "name": "Send a message",
+      "webhookId": "905168e8-28be-45e0-9ef0-d9b8292a135b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "s35ChjRjKJhzkNSB",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "97eedc0b-ab14-4cfa-b8cf-53898d38df19",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d1adcf8ee9393993d744a4a47ca42a3fa0956fca7c9641c434526c1319c70cb9"
+  },
+  "id": "nO-B7PDL4d2-nhi21VYwn",
+  "tags": []
+}
